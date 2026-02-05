@@ -10,6 +10,7 @@ const readOrders = async () => {
         return orders || [];
     } catch (error) {
         console.error('Error reading orders from KV:', error);
+        // Return empty array if KV not set up yet
         return [];
     }
 };
@@ -46,7 +47,8 @@ module.exports = async (req, res) => {
             return res.status(200).json({ 
                 status: 'OK', 
                 timestamp: new Date().toISOString(),
-                storage: 'Vercel KV'
+                storage: 'Vercel KV',
+                redisConfigured: !!process.env.REDIS_URL
             });
         }
 
