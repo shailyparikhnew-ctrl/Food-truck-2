@@ -1,7 +1,25 @@
-const { kv } = require('@vercel/kv');
+// Import Vercel KV
+import { kv } from '@vercel/kv';
 
 // Storage key for orders
 const ORDERS_KEY = 'food-truck-orders';
+
+// Helper to parse request body
+async function parseBody(req) {
+    return new Promise((resolve) => {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+        req.on('end', () => {
+            try {
+                resolve(JSON.parse(body));
+            } catch (e) {
+                resolve({});
+            }
+        });
+    });
+}
 
 // Helper functions
 const readOrders = async () => {
@@ -9,8 +27,7 @@ const readOrders = async () => {
         const orders = await kv.get(ORDERS_KEY);
         return orders || [];
     } catch (error) {
-        console.error('Error reading orders from KV:', error);
-        // Return empty array if KV not set up yet
+        console.error('Error reading orders:', error);
         return [];
     }
 };
@@ -20,13 +37,13 @@ const writeOrders = async (orders) => {
         await kv.set(ORDERS_KEY, orders);
         return true;
     } catch (error) {
-        console.error('Error writing orders to KV:', error);
+        console.error('Error writing orders:', error);
         return false;
     }
 };
 
-// Main handler for all API routes
-module.exports = async (req, res) => {
+// Main API handler
+export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -38,17 +55,17 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { method, url } = req;
-    const path = url.split('?')[0];
+    const { method } = req;
+    const path = req.url?.split('?')[0] || '';
 
     try {
         // GET /api - Health check
-        if (method === 'GET' && (path === '/api' || path === '/api/health')) {
+        if (method === 'GET' && (path === '/api' || path === '/api/health' || path === '/')) {
             return res.status(200).json({ 
                 status: 'OK', 
                 timestamp: new Date().toISOString(),
                 storage: 'Vercel KV',
-                redisConfigured: !!process.env.REDIS_URL
+                redisUrl: !!process.env.REDIS_URL
             });
         }
 
@@ -60,11 +77,18 @@ module.exports = async (req, res) => {
 
         // POST /api/orders - Create new order
         if (method === 'POST' && path === '/api/orders') {
+            const body = await parseBody(req);
             const orders = await readOrders();
             
             const newOrder = {
                 id: Date.now(),
-                ...req.body,
+                items: body.items || [],
+                total: body.total || 0,
+                type: body.type || 'eat',
+                customerName: body.customerName || '',
+                customerPhone: body.customerPhone || '',
+                timestamp: body.timestamp || new Date().toLocaleTimeString(),
+                date: body.date || new Date().toLocaleDateString(),
                 status: 'pending',
                 createdAt: new Date().toISOString()
             };
@@ -76,13 +100,14 @@ module.exports = async (req, res) => {
                 return res.status(500).json({ error: 'Failed to save order' });
             }
             
-            console.log(`✅ New order placed: #${newOrder.id} - ${newOrder.customerName}`);
+            console.log(`✅ New order: #${newOrder.id} - ${newOrder.customerName}`);
             return res.status(201).json(newOrder);
         }
 
         // GET /api/orders/:id - Get single order
-        if (method === 'GET' && path.match(/^\/api\/orders\/\d+$/)) {
-            const id = parseInt(path.split('/').pop());
+        const getMatch = path.match(/^\/api\/orders\/(\d+)$/);
+        if (method === 'GET' && getMatch) {
+            const id = parseInt(getMatch[1]);
             const orders = await readOrders();
             const order = orders.find(o => o.id === id);
             
@@ -94,8 +119,10 @@ module.exports = async (req, res) => {
         }
 
         // PATCH /api/orders/:id - Update order
-        if (method === 'PATCH' && path.match(/^\/api\/orders\/\d+$/)) {
-            const id = parseInt(path.split('/').pop());
+        const patchMatch = path.match(/^\/api\/orders\/(\d+)$/);
+        if (method === 'PATCH' && patchMatch) {
+            const id = parseInt(patchMatch[1]);
+            const body = await parseBody(req);
             const orders = await readOrders();
             const orderIndex = orders.findIndex(o => o.id === id);
             
@@ -105,7 +132,7 @@ module.exports = async (req, res) => {
             
             orders[orderIndex] = {
                 ...orders[orderIndex],
-                ...req.body,
+                ...body,
                 updatedAt: new Date().toISOString()
             };
             
@@ -115,13 +142,14 @@ module.exports = async (req, res) => {
                 return res.status(500).json({ error: 'Failed to update order' });
             }
             
-            console.log(`🔄 Order #${orders[orderIndex].id} status updated to: ${orders[orderIndex].status}`);
+            console.log(`🔄 Order #${id} updated to: ${orders[orderIndex].status}`);
             return res.status(200).json(orders[orderIndex]);
         }
 
         // DELETE /api/orders/:id - Delete single order
-        if (method === 'DELETE' && path.match(/^\/api\/orders\/\d+$/)) {
-            const id = parseInt(path.split('/').pop());
+        const deleteMatch = path.match(/^\/api\/orders\/(\d+)$/);
+        if (method === 'DELETE' && deleteMatch) {
+            const id = parseInt(deleteMatch[1]);
             const orders = await readOrders();
             const filteredOrders = orders.filter(o => o.id !== id);
             
@@ -143,14 +171,18 @@ module.exports = async (req, res) => {
         if (method === 'DELETE' && path === '/api/orders') {
             await writeOrders([]);
             console.log('🗑️  All orders cleared');
-            return res.status(200).json({ message: 'All orders cleared successfully' });
+            return res.status(200).json({ message: 'All orders cleared' });
         }
 
         // Route not found
-        return res.status(404).json({ error: 'Not found' });
+        return res.status(404).json({ error: 'Route not found', path, method });
 
     } catch (error) {
         console.error('API Error:', error);
-        return res.status(500).json({ error: 'Internal server error', message: error.message });
+        return res.status(500).json({ 
+            error: 'Internal server error', 
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
-};
+}
