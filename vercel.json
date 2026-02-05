@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/kitchen", "destination": "/kitchen.html" },
+    { "source": "/", "destination": "/customer.html" }
+  ]
+}
