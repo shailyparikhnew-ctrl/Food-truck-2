@@ -1,0 +1,229 @@
+# 🍔 Food Truck Ordering System
+
+A complete food truck ordering management system with separate customer and kitchen interfaces and **persistent storage**.
+
+## 🌟 Features
+
+### Customer Interface (`/`)
+
+- Browse menu by categories
+- Add/remove items from cart
+- Choose between Eat Here or Parcel
+- Enter name and phone number
+- Get order number after placing order
+- Mobile-optimized for QR code scanning
+
+### Kitchen Dashboard (`/kitchen`)
+
+- Real-time order updates (auto-refresh every 3 seconds)
+- View all active orders
+- Update order status: Pending → Started → Finished → Handed Over
+- Mark orders with errors
+- View completed orders history
+- Delete orders
+- Order statistics at top
+
+### 🗄️ Persistent Storage
+
+- Uses **Vercel KV** (Redis) for permanent data storage
+- Orders never disappear or reset
+- Fast and reliable
+- Free tier perfect for food trucks
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+- Vercel account (for deployment with persistent storage)
+
+### Local Development (Without Persistent Storage)
+
+1. **Install dependencies:**
+
+```bash
+npm install
+```
+
+1. **Start the server:**
+
+```bash
+npm start
+```
+
+1. **Access the applications:**
+
+- Customer Interface: `http://localhost:3000/`
+- Kitchen Dashboard: `http://localhost:3000/kitchen`
+
+**Note**: Local development uses temporary storage. For persistent storage, deploy to Vercel with KV.
+
+### Deploy to Vercel with Persistent Storage
+
+**See detailed guides:**
+
+- 📘 <VERCEL_DEPLOYMENT.md> - How to deploy
+- 🗄️ <VERCEL_KV_SETUP.md> - How to set up persistent storage
+
+**Quick version:**
+
+1. Upload to GitHub
+1. Deploy on Vercel
+1. Create Vercel KV database in dashboard
+1. Connect KV to your project
+1. Done! Your orders are now permanently stored
+
+## 📱 Testing on Phone
+
+### Option 1: Local Network (Same WiFi)
+
+1. Find your computer’s local IP address:
+- **Windows:** `ipconfig` (look for IPv4 Address)
+- **Mac/Linux:** `ifconfig` or `ip addr` (look for inet)
+1. Start the server:
+
+```bash
+npm start
+```
+
+1. On your phone, visit:
+- Customer: `http://YOUR_IP:3000/`
+- Kitchen: `http://YOUR_IP:3000/kitchen`
+
+Example: `http://192.168.1.100:3000/`
+
+### Option 2: Deploy Online
+
+#### Deploy to Render (Free)
+
+1. Create account at [render.com](https://render.com)
+1. Create new Web Service
+1. Connect your GitHub repository or upload files
+1. Set build command: `npm install`
+1. Set start command: `npm start`
+1. Deploy!
+
+Your URLs will be:
+
+- Customer: `https://your-app.onrender.com/`
+- Kitchen: `https://your-app.onrender.com/kitchen`
+
+#### Deploy to Railway (Free)
+
+1. Create account at [railway.app](https://railway.app)
+1. Click “New Project”
+1. Select “Deploy from GitHub repo” or upload
+1. Railway will auto-detect Node.js and deploy
+1. Get your public URL
+
+#### Deploy to Heroku
+
+1. Create Heroku account
+1. Install Heroku CLI
+1. Run:
+
+```bash
+heroku login
+heroku create your-food-truck-app
+git push heroku main
+```
+
+## 🔗 Create QR Code for Customer Interface
+
+1. Deploy your app online (see above)
+1. Go to [QR Code Generator](https://www.qr-code-generator.com/)
+1. Enter your customer URL (e.g., `https://your-app.onrender.com/`)
+1. Generate and download QR code
+1. Print and place at your food truck!
+
+## 🛠️ API Endpoints
+
+|Method|Endpoint         |Description        |
+|------|-----------------|-------------------|
+|GET   |`/api/orders`    |Get all orders     |
+|GET   |`/api/orders/:id`|Get single order   |
+|POST  |`/api/orders`    |Create new order   |
+|PATCH |`/api/orders/:id`|Update order status|
+|DELETE|`/api/orders/:id`|Delete order       |
+
+## 📊 Order Status Flow
+
+```
+Pending → Started → Finished → Handed Over
+    ↓
+  Error (can be reset to Pending)
+```
+
+## 🎨 Customization
+
+### Update Menu Items
+
+Edit `customer.html` around line 20:
+
+```javascript
+const menuItems = [
+    { id: 1, name: 'Your Item', price: 100, category: 'Category', emoji: '🍔' },
+    // Add more items...
+];
+```
+
+### Change Styling
+
+Both HTML files use Tailwind CSS. Modify classes to change appearance.
+
+### Change UPI ID
+
+Edit `customer.html` around line 145 to update the UPI payment ID.
+
+## 🔒 Security Considerations
+
+For production use:
+
+- Add authentication for kitchen dashboard
+- Use environment variables for configuration
+- Add rate limiting
+- Use HTTPS
+- Add input validation
+- Implement proper error handling
+
+## 📝 File Structure
+
+```
+├── server.js          # Express server
+├── customer.html      # Customer ordering interface
+├── kitchen.html       # Kitchen dashboard
+├── package.json       # Dependencies
+├── orders.json        # Data storage (auto-created)
+└── README.md         # This file
+```
+
+## 🐛 Troubleshooting
+
+**Orders not syncing between customer and kitchen:**
+
+- Make sure both interfaces are pointing to the same server URL
+- Check browser console for errors
+- Verify server is running
+
+**Can’t access from phone:**
+
+- Ensure phone and computer are on same WiFi
+- Check firewall settings
+- Try accessing from computer browser first
+- Use IP address instead of ‘localhost’
+
+**Port already in use:**
+
+- Change PORT in `server.js` (line 6)
+- Or kill the process using port 3000
+
+## 📞 Support
+
+For issues or questions, check the browser console and server logs for error messages.
+
+## 🎉 Ready to Use!
+
+Your food truck ordering system is ready! Share the customer URL or QR code with customers, and use the kitchen dashboard to manage orders efficiently.
+
+Happy cooking! 🍔👨‍🍳
