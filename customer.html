@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Truck - Order Now</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const API_URL = ''; // Empty string for relative URLs (works with Vercel)
+
+        const CustomerApp = () => {
+            const [cart, setCart] = useState([]);
+            const [orderType, setOrderType] = useState('eat');
+            const [showPayment, setShowPayment] = useState(false);
+            const [customerName, setCustomerName] = useState('');
+            const [customerPhone, setCustomerPhone] = useState('');
+            const [orderPlaced, setOrderPlaced] = useState(false);
+            const [orderNumber, setOrderNumber] = useState('');
+
+            const menuItems = [
+                { id: 1, name: 'Veg Burger', price: 80, category: 'Burgers', emoji: '🍔' },
+                { id: 2, name: 'Chicken Burger', price: 120, category: 'Burgers', emoji: '🍔' },
+                { id: 3, name: 'Paneer Wrap', price: 100, category: 'Wraps', emoji: '🌯' },
+                { id: 4, name: 'Chicken Wrap', price: 130, category: 'Wraps', emoji: '🌯' },
+                { id: 5, name: 'French Fries', price: 60, category: 'Sides', emoji: '🍟' },
+                { id: 6, name: 'Masala Fries', price: 80, category: 'Sides', emoji: '🍟' },
+                { id: 7, name: 'Cold Drink', price: 40, category: 'Beverages', emoji: '🥤' },
+                { id: 8, name: 'Fresh Juice', price: 60, category: 'Beverages', emoji: '🧃' },
+            ];
+
+            const addToCart = (item) => {
+                const existingItem = cart.find(cartItem => cartItem.id === item.id);
+                if (existingItem) {
+                    setCart(cart.map(cartItem =>
+                        cartItem.id === item.id
+                            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                            : cartItem
+                    ));
+                } else {
+                    setCart([...cart, { ...item, quantity: 1 }]);
+                }
+            };
+
+            const removeFromCart = (itemId) => {
+                const existingItem = cart.find(cartItem => cartItem.id === itemId);
+                if (existingItem.quantity > 1) {
+                    setCart(cart.map(cartItem =>
+                        cartItem.id === itemId
+                            ? { ...cartItem, quantity: cartItem.quantity - 1 }
+                            : cartItem
+                    ));
+                } else {
+                    setCart(cart.filter(cartItem => cartItem.id !== itemId));
+                }
+            };
+
+            const getTotal = () => {
+                return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            };
+
+            const placeOrder = async () => {
+                if (!customerName || !customerPhone) {
+                    alert('Please enter your name and phone number');
+                    return;
+                }
+
+                const orderData = {
+                    items: cart,
+                    total: getTotal(),
+                    type: orderType,
+                    customerName,
+                    customerPhone,
+                    timestamp: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleDateString()
+                };
+
+                try {
+                    const response = await fetch(`${API_URL}/api/orders`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(orderData)
+                    });
+
+                    const result = await response.json();
+                    const orderNum = result.id.toString().slice(-4);
+                    setOrderNumber(orderNum);
+                    setOrderPlaced(true);
+                    setCart([]);
+                    setShowPayment(false);
+                } catch (error) {
+                    alert('Failed to place order. Please try again.');
+                    console.error('Error:', error);
+                }
+            };
+
+            const startNewOrder = () => {
+                setOrderPlaced(false);
+                setCustomerName('');
+                setCustomerPhone('');
+                setOrderNumber('');
+            };
+
+            if (orderPlaced) {
+                return (
+                    <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+                            <div className="text-6xl mb-4">✅</div>
+                            <h1 className="text-3xl font-bold text-green-600 mb-2">Order Placed!</h1>
+                            <div className="bg-orange-100 rounded-lg p-6 my-6">
+                                <p className="text-sm text-gray-600 mb-2">Your Order Number</p>
+                                <p className="text-5xl font-bold text-orange-600">#{orderNumber}</p>
+                            </div>
+                            <p className="text-gray-700 mb-4">
+                                Please complete the payment via UPI and show this number to our staff
+                            </p>
+                            <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                                <p className="font-semibold text-blue-900">UPI Payment</p>
+                                <p className="text-sm text-blue-700">foodtruck@upi</p>
+                                <p className="text-sm text-gray-600 mt-2">or scan QR code at counter</p>
+                            </div>
+                            <button
+                                onClick={startNewOrder}
+                                className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600"
+                            >
+                                Place Another Order
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-orange-50">
+                    <div className="bg-orange-500 text-white p-6 shadow-lg">
+                        <h1 className="text-3xl font-bold text-center">🍔 Food Truck</h1>
+                        <p className="text-center mt-2">Delicious food on wheels!</p>
+                    </div>
+
+                    <div className="p-4 bg-white shadow">
+                        <div className="flex gap-4 justify-center">
+                            <button
+                                onClick={() => setOrderType('eat')}
+                                className={`px-6 py-3 rounded-lg font-semibold transition ${
+                                    orderType === 'eat'
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                🍽️ Eat Here
+                            </button>
+                            <button
+                                onClick={() => setOrderType('parcel')}
+                                className={`px-6 py-3 rounded-lg font-semibold transition ${
+                                    orderType === 'parcel'
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                📦 Parcel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-4 pb-32">
+                        <h2 className="text-2xl font-bold mb-4">Menu</h2>
+                        <div className="grid gap-4">
+                            {Object.entries(
+                                menuItems.reduce((acc, item) => {
+                                    if (!acc[item.category]) acc[item.category] = [];
+                                    acc[item.category].push(item);
+                                    return acc;
+                                }, {})
+                            ).map(([category, items]) => (
+                                <div key={category} className="bg-white rounded-lg shadow p-4">
+                                    <h3 className="text-xl font-semibold mb-3 text-orange-600">{category}</h3>
+                                    <div className="space-y-2">
+                                        {items.map(item => (
+                                            <div key={item.id} className="flex justify-between items-center p-3 border rounded hover:bg-orange-50 transition">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-2xl">{item.emoji}</span>
+                                                    <div>
+                                                        <p className="font-semibold">{item.name}</p>
+                                                        <p className="text-orange-600 font-bold">₹{item.price}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => addToCart(item)}
+                                                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition"
+                                                >
+                                                    Add +
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {cart.length > 0 && (
+                        <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4 border-t-2 border-orange-500">
+                            <div className="max-w-4xl mx-auto">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="text-lg font-bold">Cart ({cart.length} items)</h3>
+                                    <button
+                                        onClick={() => setShowPayment(true)}
+                                        className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-600 transition"
+                                    >
+                                        Checkout ₹{getTotal()}
+                                    </button>
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto">
+                                    {cart.map(item => (
+                                        <div key={item.id} className="bg-gray-100 px-3 py-1 rounded flex items-center gap-2 whitespace-nowrap">
+                                            <span>{item.name} x{item.quantity}</span>
+                                            <button
+                                                onClick={() => removeFromCart(item.id)}
+                                                className="text-red-500 font-bold"
+                                            >
+                                                −
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showPayment && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                                <h2 className="text-2xl font-bold mb-4">Complete Order</h2>
+                                
+                                <div className="mb-4">
+                                    <label className="block font-semibold mb-2">Your Name *</label>
+                                    <input
+                                        type="text"
+                                        value={customerName}
+                                        onChange={(e) => setCustomerName(e.target.value)}
+                                        className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Enter your name"
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block font-semibold mb-2">Phone Number *</label>
+                                    <input
+                                        type="tel"
+                                        value={customerPhone}
+                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                        className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        placeholder="Enter phone number"
+                                        maxLength="10"
+                                    />
+                                </div>
+
+                                <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                                    <h3 className="font-bold mb-2">Order Summary</h3>
+                                    {cart.map(item => (
+                                        <div key={item.id} className="flex justify-between text-sm mb-1">
+                                            <span>{item.name} x{item.quantity}</span>
+                                            <span>₹{item.price * item.quantity}</span>
+                                        </div>
+                                    ))}
+                                    <div className="border-t border-orange-300 mt-2 pt-2 font-bold flex justify-between">
+                                        <span>Total</span>
+                                        <span className="text-orange-600">₹{getTotal()}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-2">
+                                        Order Type: <span className="font-semibold">{orderType === 'eat' ? '🍽️ Eat Here' : '📦 Parcel'}</span>
+                                    </p>
+                                </div>
+
+                                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-blue-900">Payment Instructions</p>
+                                    <p className="text-sm text-blue-700 mt-1">After placing order, pay via UPI and show order number to staff</p>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setShowPayment(false)}
+                                        className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400 transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={placeOrder}
+                                        className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition"
+                                    >
+                                        Place Order
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<CustomerApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
