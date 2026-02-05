@@ -1,6 +1,7 @@
 {
   "name": "food-truck-ordering",
   "version": "1.0.0",
+  "type": "module",
   "description": "Food Truck Ordering System with separate customer and kitchen interfaces",
   "main": "server.js",
   "scripts": {
