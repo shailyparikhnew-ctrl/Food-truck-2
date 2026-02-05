@@ -1,21 +1,21 @@
 {
-“name”: “food-truck-ordering”,
-“version”: “1.0.0”,
-“description”: “Food Truck Ordering System with separate customer and kitchen interfaces”,
-“main”: “server.js”,
-“scripts”: {
-“start”: “node server.js”,
-“dev”: “nodemon server.js”
-},
-“keywords”: [“food-truck”, “ordering”, “restaurant”],
-“author”: “”,
-“license”: “MIT”,
-“dependencies”: {
-“express”: “^4.18.2”,
-“cors”: “^2.8.5”,
-“@vercel/kv”: “^1.0.1”
-},
-“devDependencies”: {
-“nodemon”: “^3.0.1”
-}
+  "name": "food-truck-ordering",
+  "version": "1.0.0",
+  "description": "Food Truck Ordering System with separate customer and kitchen interfaces",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["food-truck", "ordering", "restaurant"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@vercel/kv": "^1.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
 }
