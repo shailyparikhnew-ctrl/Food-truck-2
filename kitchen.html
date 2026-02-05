@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Dashboard - Food Truck</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const API_URL = ''; // Empty string for relative URLs (works with Vercel)
+
+        const KitchenApp = () => {
+            const [orders, setOrders] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [filterStatus, setFilterStatus] = useState('active'); // 'active' or 'completed'
+
+            useEffect(() => {
+                fetchOrders();
+                const interval = setInterval(fetchOrders, 3000); // Auto-refresh every 3 seconds
+                return () => clearInterval(interval);
+            }, []);
+
+            const fetchOrders = async () => {
+                try {
+                    const response = await fetch(`${API_URL}/api/orders`);
+                    const data = await response.json();
+                    setOrders(data);
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Error fetching orders:', error);
+                    setLoading(false);
+                }
+            };
+
+            const updateOrderStatus = async (orderId, newStatus) => {
+                try {
+                    await fetch(`${API_URL}/api/orders/${orderId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+                    fetchOrders();
+                } catch (error) {
+                    console.error('Error updating order:', error);
+                }
+            };
+
+            const deleteOrder = async (orderId) => {
+                if (!confirm('Are you sure you want to delete this order?')) return;
+                
+                try {
+                    await fetch(`${API_URL}/api/orders/${orderId}`, {
+                        method: 'DELETE'
+                    });
+                    fetchOrders();
+                } catch (error) {
+                    console.error('Error deleting order:', error);
+                }
+            };
+
+            const statusConfig = {
+                pending: { label: 'New Order', color: 'bg-yellow-500', icon: '🔔' },
+                started: { label: 'Preparing', color: 'bg-blue-500', icon: '👨‍🍳' },
+                finished: { label: 'Ready', color: 'bg-green-500', icon: '✅' },
+                handedover: { label: 'Completed', color: 'bg-gray-500', icon: '🎉' },
+                error: { label: 'Error', color: 'bg-red-500', icon: '⚠️' }
+            };
+
+            const activeOrders = orders.filter(order => order.status !== 'handedover');
+            const completedOrders = orders.filter(order => order.status === 'handedover');
+
+            const pendingCount = orders.filter(o => o.status === 'pending').length;
+            const preparingCount = orders.filter(o => o.status === 'started').length;
+            const readyCount = orders.filter(o => o.status === 'finished').length;
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="text-4xl mb-4">⏳</div>
+                            <p className="text-xl text-gray-600">Loading orders...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-100">
+                    <div className="bg-gray-800 text-white p-4 shadow-lg sticky top-0 z-10">
+                        <h1 className="text-2xl font-bold mb-3">🍳 Kitchen Dashboard</h1>
+                        
+                        <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                            <div className="bg-yellow-600 rounded p-2">
+                                <div className="font-bold text-lg">{pendingCount}</div>
+                                <div className="text-xs">New Orders</div>
+                            </div>
+                            <div className="bg-blue-600 rounded p-2">
+                                <div className="font-bold text-lg">{preparingCount}</div>
+                                <div className="text-xs">Preparing</div>
+                            </div>
+                            <div className="bg-green-600 rounded p-2">
+                                <div className="font-bold text-lg">{readyCount}</div>
+                                <div className="text-xs">Ready</div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-3">
+                            <button
+                                onClick={() => setFilterStatus('active')}
+                                className={`flex-1 py-2 rounded font-semibold transition ${
+                                    filterStatus === 'active'
+                                        ? 'bg-orange-500'
+                                        : 'bg-gray-600 hover:bg-gray-700'
+                                }`}
+                            >
+                                Active Orders ({activeOrders.length})
+                            </button>
+                            <button
+                                onClick={() => setFilterStatus('completed')}
+                                className={`flex-1 py-2 rounded font-semibold transition ${
+                                    filterStatus === 'completed'
+                                        ? 'bg-orange-500'
+                                        : 'bg-gray-600 hover:bg-gray-700'
+                                }`}
+                            >
+                                Completed ({completedOrders.length})
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-4">
+                        {filterStatus === 'active' && (
+                            <>
+                                {activeOrders.length === 0 ? (
+                                    <div className="text-center py-20 text-gray-500">
+                                        <div className="text-6xl mb-4">😴</div>
+                                        <p className="text-xl">No active orders</p>
+                                        <p className="text-sm mt-2">New orders will appear here automatically</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {activeOrders.map(order => {
+                                            const config = statusConfig[order.status];
+                                            return (
+                                                <div key={order.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform transition hover:scale-105">
+                                                    <div className={`${config.color} text-white p-3`}>
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xl">{config.icon}</span>
+                                                                <span className="font-bold">{config.label}</span>
+                                                            </div>
+                                                            <span className="text-sm font-mono bg-white bg-opacity-20 px-2 py-1 rounded">
+                                                                #{order.id.toString().slice(-4)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-4">
+                                                        <div className="mb-3 pb-3 border-b">
+                                                            <p className="font-bold text-lg">{order.customerName}</p>
+                                                            <p className="text-sm text-gray-600">📱 {order.customerPhone}</p>
+                                                            <p className="text-xs text-gray-500 mt-1">🕒 {order.timestamp}</p>
+                                                            <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-semibold ${
+                                                                order.type === 'parcel' 
+                                                                    ? 'bg-purple-100 text-purple-700' 
+                                                                    : 'bg-green-100 text-green-700'
+                                                            }`}>
+                                                                {order.type === 'parcel' ? '📦 Parcel' : '🍽️ Eat Here'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="mb-4 bg-gray-50 rounded p-3">
+                                                            <p className="font-semibold text-sm mb-2 text-gray-700">Order Items:</p>
+                                                            {order.items.map((item, idx) => (
+                                                                <div key={idx} className="flex justify-between text-sm mb-1">
+                                                                    <span className="font-medium">{item.name} <span className="text-gray-500">x{item.quantity}</span></span>
+                                                                    <span className="text-gray-600">₹{item.price * item.quantity}</span>
+                                                                </div>
+                                                            ))}
+                                                            <div className="border-t mt-2 pt-2 font-bold flex justify-between text-orange-600">
+                                                                <span>Total</span>
+                                                                <span>₹{order.total}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            {order.status === 'pending' && (
+                                                                <button
+                                                                    onClick={() => updateOrderStatus(order.id, 'started')}
+                                                                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 font-semibold transition transform active:scale-95"
+                                                                >
+                                                                    🚀 Start Preparing
+                                                                </button>
+                                                            )}
+                                                            {order.status === 'started' && (
+                                                                <button
+                                                                    onClick={() => updateOrderStatus(order.id, 'finished')}
+                                                                    className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-semibold transition transform active:scale-95"
+                                                                >
+                                                                    ✅ Mark as Ready
+                                                                </button>
+                                                            )}
+                                                            {order.status === 'finished' && (
+                                                                <button
+                                                                    onClick={() => updateOrderStatus(order.id, 'handedover')}
+                                                                    className="w-full bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-800 font-semibold transition transform active:scale-95"
+                                                                >
+                                                                    🎉 Hand Over to Customer
+                                                                </button>
+                                                            )}
+                                                            {order.status === 'error' && (
+                                                                <button
+                                                                    onClick={() => updateOrderStatus(order.id, 'pending')}
+                                                                    className="w-full bg-yellow-500 text-white py-3 rounded-lg hover:bg-yellow-600 font-semibold transition"
+                                                                >
+                                                                    🔄 Reset to Pending
+                                                                </button>
+                                                            )}
+                                                            <div className="flex gap-2">
+                                                                {order.status !== 'error' && (
+                                                                    <button
+                                                                        onClick={() => updateOrderStatus(order.id, 'error')}
+                                                                        className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 text-sm font-semibold transition"
+                                                                    >
+                                                                        ⚠️ Mark Error
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => deleteOrder(order.id)}
+                                                                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 text-sm font-semibold transition"
+                                                                >
+                                                                    🗑️ Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {filterStatus === 'completed' && (
+                            <>
+                                {completedOrders.length === 0 ? (
+                                    <div className="text-center py-20 text-gray-500">
+                                        <div className="text-6xl mb-4">📦</div>
+                                        <p className="text-xl">No completed orders yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {completedOrders.map(order => (
+                                            <div key={order.id} className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <p className="font-bold">#{order.id.toString().slice(-4)}</p>
+                                                        <p className="text-sm font-semibold">{order.customerName}</p>
+                                                    </div>
+                                                    <span className="text-2xl">✅</span>
+                                                </div>
+                                                <p className="text-xs text-gray-600 mb-2">
+                                                    {order.timestamp} • ₹{order.total}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mb-3">
+                                                    {order.items.map(item => `${item.name} x${item.quantity}`).join(', ')}
+                                                </p>
+                                                <button
+                                                    onClick={() => deleteOrder(order.id)}
+                                                    className="w-full text-xs text-red-600 hover:text-red-800 hover:underline font-semibold"
+                                                >
+                                                    Remove from list
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<KitchenApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
