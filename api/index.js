@@ -1,36 +1,5 @@
-// Import Vercel KV
-import { createClient } from '@vercel/kv';
-
-// Parse REDIS_URL to extract URL and token
-// Format: redis://default:TOKEN@HOST:PORT
-function parseRedisUrl(redisUrl) {
-    if (!redisUrl) return { url: '', token: '' };
-    
-    try {
-        // Extract token from redis://default:TOKEN@host:port
-        const match = redisUrl.match(/redis:\/\/default:([^@]+)@(.+)/);
-        if (match) {
-            const token = match[1];
-            const hostAndPort = match[2];
-            const url = `https://${hostAndPort}`;
-            return { url, token };
-        }
-        
-        // If no match, try to use it as-is
-        return { url: redisUrl, token: '' };
-    } catch (e) {
-        console.error('Error parsing REDIS_URL:', e);
-        return { url: '', token: '' };
-    }
-}
-
-// Initialize KV client
-const { url: kvUrl, token: kvToken } = parseRedisUrl(process.env.REDIS_URL);
-
-const kv = createClient({
-    url: kvUrl || process.env.KV_REST_API_URL || '',
-    token: kvToken || process.env.KV_REST_API_TOKEN || ''
-});
+// In-memory storage (will work without KV for now)
+let ordersCache = [];
 
 // Storage key for orders
 const ORDERS_KEY = 'food-truck-orders';
@@ -52,23 +21,22 @@ async function parseBody(req) {
     });
 }
 
-// Helper functions
+// Helper functions - using in-memory storage
 const readOrders = async () => {
     try {
-        const orders = await kv.get(ORDERS_KEY);
-        return orders || [];
+        return ordersCache || [];
     } catch (error) {
-        console.error('Error reading orders from KV:', error);
+        console.error('Error reading orders:', error);
         return [];
     }
 };
 
 const writeOrders = async (orders) => {
     try {
-        await kv.set(ORDERS_KEY, orders);
+        ordersCache = orders;
         return true;
     } catch (error) {
-        console.error('Error writing orders to KV:', error);
+        console.error('Error writing orders:', error);
         return false;
     }
 };
@@ -95,10 +63,8 @@ export default async function handler(req, res) {
             return res.status(200).json({ 
                 status: 'OK', 
                 timestamp: new Date().toISOString(),
-                storage: 'Vercel KV',
-                redisUrl: !!process.env.REDIS_URL,
-                kvUrl: !!kvUrl,
-                kvToken: !!kvToken
+                storage: 'In-Memory (Temporary)',
+                note: 'Add KV_REST_API_URL and KV_REST_API_TOKEN for persistent storage'
             });
         }
 
@@ -214,8 +180,7 @@ export default async function handler(req, res) {
         console.error('API Error:', error);
         return res.status(500).json({ 
             error: 'Internal server error', 
-            message: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            message: error.message
         });
     }
 }
