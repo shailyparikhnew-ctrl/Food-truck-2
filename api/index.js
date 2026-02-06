@@ -1,5 +1,36 @@
 // Import Vercel KV
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
+
+// Parse REDIS_URL to extract URL and token
+// Format: redis://default:TOKEN@HOST:PORT
+function parseRedisUrl(redisUrl) {
+    if (!redisUrl) return { url: '', token: '' };
+    
+    try {
+        // Extract token from redis://default:TOKEN@host:port
+        const match = redisUrl.match(/redis:\/\/default:([^@]+)@(.+)/);
+        if (match) {
+            const token = match[1];
+            const hostAndPort = match[2];
+            const url = `https://${hostAndPort}`;
+            return { url, token };
+        }
+        
+        // If no match, try to use it as-is
+        return { url: redisUrl, token: '' };
+    } catch (e) {
+        console.error('Error parsing REDIS_URL:', e);
+        return { url: '', token: '' };
+    }
+}
+
+// Initialize KV client
+const { url: kvUrl, token: kvToken } = parseRedisUrl(process.env.REDIS_URL);
+
+const kv = createClient({
+    url: kvUrl || process.env.KV_REST_API_URL || '',
+    token: kvToken || process.env.KV_REST_API_TOKEN || ''
+});
 
 // Storage key for orders
 const ORDERS_KEY = 'food-truck-orders';
@@ -27,7 +58,7 @@ const readOrders = async () => {
         const orders = await kv.get(ORDERS_KEY);
         return orders || [];
     } catch (error) {
-        console.error('Error reading orders:', error);
+        console.error('Error reading orders from KV:', error);
         return [];
     }
 };
@@ -37,7 +68,7 @@ const writeOrders = async (orders) => {
         await kv.set(ORDERS_KEY, orders);
         return true;
     } catch (error) {
-        console.error('Error writing orders:', error);
+        console.error('Error writing orders to KV:', error);
         return false;
     }
 };
@@ -65,7 +96,9 @@ export default async function handler(req, res) {
                 status: 'OK', 
                 timestamp: new Date().toISOString(),
                 storage: 'Vercel KV',
-                redisUrl: !!process.env.REDIS_URL
+                redisUrl: !!process.env.REDIS_URL,
+                kvUrl: !!kvUrl,
+                kvToken: !!kvToken
             });
         }
 
